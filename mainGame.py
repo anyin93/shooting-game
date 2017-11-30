@@ -84,6 +84,9 @@ shoot_frequency = 0
 #적 개수 변수
 enemy_frequency = 0
 
+#적사격 횟수 변수
+enemy_shoot_frequency = 0
+
 player_down_index = 16
 
 score = 0
@@ -109,13 +112,29 @@ while running:
 
     # 적 항공기 생성
     if enemy_frequency % 50 == 0:
-	//랜덤한 위치의 적 항공기 좌표 생성 width만 임의 , height는 맨끝
+	#랜덤한 위치의 적 항공기 좌표 생성 width만 임의 , height는 맨끝
         enemy1_pos = [random.randint(0, SCREEN_WIDTH - enemy1_rect.width), 0]
 	# 적 class 생성 좌표, 이미지, 적이 침몰했을때 이미지
         enemy1 = Enemy(enemy1_img, enemy1_down_imgs, enemy1_pos)
-	
 	# 적 그룹에 추가
         enemies1.add(enemy1)
+
+    if enemy_shoot_frequency % 35 == 0:
+        for enemy in enemies1:    
+            #(추가)
+            enemy.shoot(bullet_img)
+    enemy_shoot_frequency += 1
+    if enemy_shoot_frequency >= 35:
+        enemy_shoot_frequency = 0
+
+    # 글 머리 기호가 창 밖으로 나가면 삭제하십시오. (추가)
+    for enemy in enemies1:
+        for bullet in enemy.bullets:
+            bullet.enemy_move()
+            if bullet.rect.bottom < 0:
+                enemy.bullets.remove(bullet)
+            
+        
     #적 항공기 개수 변수에 추가
     enemy_frequency += 1
     if enemy_frequency >= 100:
@@ -126,24 +145,38 @@ while running:
         bullet.move()
         if bullet.rect.bottom < 0:
             player.bullets.remove(bullet)
+			
+	
 
     # 적기가 창 범위를 벗어난 경우 이동하여 삭제합니다.
     for enemy in enemies1:
 	# 적 항공기 이동
         enemy.move()
+        
         # 플레이어가 맞았는지 확인
         if pygame.sprite.collide_circle(enemy, player):
             enemies_down.add(enemy)
-		# 적항공기 전체 삭제
+	    # 적항공기 전체 삭제
             enemies1.remove(enemy)
-		# player hit 변수 변경
+	    # player hit 변수 변경
             player.is_hit = True
-		# 게임 오버 사운드 재생
+	    # 게임 오버 사운드 재생
             game_over_sound.play()
             break
-		# 스크린을 벗어났을경우 해당 적 삭제
-        if enemy.rect.top > SCREEN_HEIGHT:
+        #추가
+        hits = pygame.sprite.spritecollide(player, enemy.bullets, True)
+        if hits:
+            # 적항공기 전체 삭제
             enemies1.remove(enemy)
+            # player hit 변수 변경
+            player.is_hit = True
+            # 게임 오버 사운드 재생
+            game_over_sound.play()
+            break
+	# 스크린을 벗어났을경우 해당 적 삭제
+        if enemy.rect.top > SCREEN_HEIGHT:
+            enemies1.remove(enemy)	
+               
 
     # 적의 비행기에 의해 맞을 것입니다 개체는 적군의 파괴에 추가, 난파 애니메이션을 렌더링하는 데 사용됩니다
     enemies1_down = pygame.sprite.groupcollide(enemies1, player.bullets, 1, 1)
@@ -180,6 +213,8 @@ while running:
 
     # 총알과 적기 그리기
     player.bullets.draw(screen)
+    for enemy in enemies1:
+        enemy.bullets.draw(screen)
     enemies1.draw(screen)
 
     # 점수 뽑기
@@ -212,7 +247,7 @@ while running:
             player.moveRight()
 
 
-//게임내에 표시 되는 점수 등 location 설정
+#게임내에 표시 되는 점수 등 location 설정
 font = pygame.font.Font(None, 48)
 text = font.render('Score: '+ str(score), True, (255, 0, 0))
 text_rect = text.get_rect()
